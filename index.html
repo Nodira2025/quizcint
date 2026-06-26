@@ -1,0 +1,701 @@
+Comprendo perfectamente su observación. He tomado el sistema de diálogos pausado
+y calmado del sitio web y lo he adaptado por completo para convertirlo en el
+juego-examen interactivo de inglés.
+
+En esta nueva versión, la interfaz se divide en dos paneles:
+
+1.  Panel Izquierdo: Muestra la hoja de actividades original (input_file_0.jpeg)
+    [img] de forma clara para que el alumno pueda consultarla en tiempo real.
+2.  Panel Derecho y Caja de Diálogos: La "Guía" acompaña al alumno paso a paso a
+    través de las 8 situaciones, evaluando la estructura gramatical del Pasado
+    Continuo (afirmativa, negativa, interrogativa y el uso de was/were + -ing
+    frente al pasado simple con when/while).
+
+Si el alumno comete un error, el sistema no lo penaliza agresivamente; en su
+lugar, la Guía le explica de forma amigable la regla gramatical y le permite
+reintentar, haciendo la experiencia de evaluación mucho más constructiva y
+relajada.
+
+Código Completo del Juego-Examen (index.html)
+
+Guarde este código en un archivo llamado index.html en la misma carpeta donde
+tiene la imagen input_file_0.jpeg [img] y ábralo en cualquier navegador:
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Continuous - Juego de Evaluación Calma</title>
+    <style>
+        :root {
+            --bg-color: #121416;
+            --panel-bg: rgba(26, 29, 32, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #8ecae6;
+            --accent-correct: #a7c957;
+            --accent-incorrect: #f28482;
+            --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Efectos de fondo relajantes */
+        .ambient-light {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(142, 202, 230, 0.04) 0%, rgba(0,0,0,0) 70%);
+            top: -10%;
+            right: 5%;
+            pointer-events: none;
+            z-index: -1;
+            filter: blur(80px);
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .stats {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Layout de dos columnas */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 2rem;
+            max-width: 1300px;
+            margin: 1.5rem auto 11rem auto; /* Espacio para no chocar con la caja de diálogo */
+            padding: 0 1.5rem;
+            flex-grow: 1;
+            width: 100%;
+        }
+
+        /* Panel de la hoja de examen (Imagen) */
+        .image-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .image-panel img {
+            max-width: 100%;
+            max-height: 65vh;
+            border-radius: 8px;
+            object-fit: contain;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Panel del estado actual del alumno */
+        .status-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-title {
+            font-size: 1.25rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .helper-text {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .visual-cue {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            opacity: 0.15;
+            transition: all 0.5s ease;
+        }
+
+        /* Caja de Diálogo fija abajo */
+        .dialogue-overlay {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 3rem);
+            max-width: 800px;
+            background: rgba(18, 20, 22, 0.95);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            transition: border-color 0.5s ease;
+        }
+
+        .dialogue-speaker {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+            font-weight: 700;
+        }
+
+        .dialogue-text {
+            font-size: 1.1rem;
+            min-height: 3.5em;
+            color: var(--text-main);
+            margin-bottom: 1.25rem;
+        }
+
+        .dialogue-text strong {
+            color: #ffffff;
+            background: rgba(255,255,255,0.05);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .dialogue-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        /* Botones del examen */
+        .btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.6rem 1.4rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(142, 202, 230, 0.05);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #121416;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: #ffffff;
+            border-color: #ffffff;
+            color: #121416;
+        }
+
+        @media (max-width: 900px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                margin-bottom: 15rem;
+            }
+            .image-panel img {
+                max-height: 45vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-light"></div>
+
+    <header>
+        <div class="logo">Past Continuous: Interactive Evaluation</div>
+        <div class="stats" id="score-counter">Progreso: 0 / 8</div>
+    </header>
+
+    <main class="workspace">
+        <!-- Panel Izquierdo: Hoja del examen con las ilustraciones -->
+        <section class="image-panel">
+            <!-- Cargará la imagen que tienes en el directorio -->
+            <img src="input_file_0.jpeg" alt="Past Continuous Exercises Sheet">
+        </section>
+
+        <!-- Panel Derecho: Contexto y consejos didácticos -->
+        <section class="status-panel">
+            <div>
+                <div class="status-title" id="status-title">Instrucciones</div>
+                <div class="helper-text" id="helper-text">
+                    La Guía te irá haciendo preguntas basadas en cada uno de los números de la hoja de la izquierda. Tómate tu tiempo para analizar cada situación antes de responder.
+                </div>
+            </div>
+            <div class="visual-cue" id="visual-cue">📝</div>
+        </section>
+    </main>
+
+    <!-- Caja de Diálogos e Interacción -->
+    <div id="dialogue-box" class="dialogue-overlay">
+        <div id="speaker-name" class="dialogue-speaker">Guía</div>
+        <div id="dialogue-text" class="dialogue-text">Cargando examen...</div>
+        <div id="dialogue-choices" class="dialogue-actions"></div>
+    </div>
+
+    <script>
+        // Estructura completa de la base de datos del examen con feedback pedagógico
+        const dialogueData = {
+            "intro": {
+                speaker: "Guía",
+                text: "Hola. Bienvenido a tu evaluación de inglés. Hoy analizaremos qué estaba ocurriendo en cada escena de tu hoja. Respira profundo, no hay prisa. ¿Empezamos?",
+                choices: [
+                    { text: "Comenzar con la escena 1", nextId: "q1" }
+                ]
+            },
+            
+            // ESCENA 1
+            "q1": {
+                speaker: "Guía",
+                text: "Mira la <strong>Escena 1</strong>. Dos personas descansan en el sofá y un bebé llora al fondo. Completa la estructura:<br><br>'They _______ relaxing in the living room when the baby started crying.'",
+                action: { title: "Escena 1: Relaxing", help: "Usa el pasado del verbo 'To Be' adecuado para el sujeto plural 'They'.", cue: "🛋️" },
+                choices: [
+                    { text: "were", score: true, nextId: "correct_q1" },
+                    { text: "was", nextId: "wrong_q1_was" },
+                    { text: "are", nextId: "wrong_q1_are" }
+                ]
+            },
+            "correct_q1": {
+                speaker: "Guía",
+                text: "¡Excelente! 'They were relaxing' es correcto. 'Were' es la forma del pasado para 'They'. Vamos a la escena 2.",
+                choices: [
+                    { text: "Siguiente escena (2)", nextId: "q2" }
+                ]
+            },
+            "wrong_q1_was": {
+                speaker: "Guía",
+                text: "Casi. Recuerda que 'was' se utiliza únicamente para sujetos singulares (I, he, she, it). Como el sujeto es 'They' (plural), necesitamos otra opción.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q1" }
+                ]
+            },
+            "wrong_q1_are": {
+                speaker: "Guía",
+                text: "Ten cuidado con el tiempo verbal. 'Are' es presente continuo ('ellos están relajándose'). Necesitamos el pasado continuo ('ellos estaban relajándose').",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q1" }
+                ]
+            },
+
+            // ESCENA 2
+            "q2": {
+                speaker: "Guía",
+                text: "En la <strong>Escena 2</strong>, el chico va en bicicleta y ocurre un choque. Completa la acción en progreso:<br><br>'While the boy _______ his bicycle, the cars crashed.'",
+                action: { title: "Escena 2: Bicycle", help: "El sujeto es 'the boy' (singular) y la acción estaba en progreso antes del choque.", cue: "🚲" },
+                choices: [
+                    { text: "was riding", score: true, nextId: "correct_q2" },
+                    { text: "were riding", nextId: "wrong_q2_were" },
+                    { text: "rode", nextId: "wrong_q2_past" }
+                ]
+            },
+            "correct_q2": {
+                speaker: "Guía",
+                text: "¡Muy bien pensado! 'Was riding' es correcto para 'the boy' (singular). Vamos a la escena del ordenador.",
+                choices: [
+                    { text: "Siguiente escena (3)", nextId: "q3" }
+                ]
+            },
+            "wrong_q2_were": {
+                speaker: "Guía",
+                text: "'The boy' equivale a 'He' (singular), por lo que no podemos usar 'were'. Inténtalo de nuevo cuidando la concordancia.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q2" }
+                ]
+            },
+            "wrong_q2_past": {
+                speaker: "Guía",
+                text: "'Rode' es pasado simple. Aquí describimos una acción larga que estaba en progreso en ese momento ('estaba andando'), no una acción corta terminada.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q2" }
+                ]
+            },
+
+            // ESCENA 3
+            "q3": {
+                speaker: "Guía",
+                text: "Observemos la <strong>Escena 3</strong>. El ordenador empieza a echar humo. ¿Qué estaba haciendo el hombre?<br><br>'The man _______ playing games, he was doing his English homework.'",
+                action: { title: "Escena 3: English Homework", help: "Aquí evaluamos la forma negativa del Pasado Continuo en singular.", cue: "💻" },
+                choices: [
+                    { text: "wasn't", score: true, nextId: "correct_q3" },
+                    { text: "weren't", nextId: "wrong_q3_plural" },
+                    { text: "didn't", nextId: "wrong_q3_did" }
+                ]
+            },
+            "correct_q3": {
+                speaker: "Guía",
+                text: "¡Perfecto! 'The man wasn't playing' es la forma correcta del negativo en pasado continuo singular. Vamos a la calle en la escena 4.",
+                choices: [
+                    { text: "Siguiente escena (4)", nextId: "q4" }
+                ]
+            },
+            "wrong_q3_plural": {
+                speaker: "Guía",
+                text: "'Weren't' es negativo plural, pero nuestro sujeto es 'The man' (singular). Ajusta el auxiliar.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q3" }
+                ]
+            },
+            "wrong_q3_did": {
+                speaker: "Guía",
+                text: "'Didn't' se usa para el pasado simple, pero no va seguido de un verbo terminado en '-ing' como 'playing'.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q3" }
+                ]
+            },
+
+            // ESCENA 4
+            "q4": {
+                speaker: "Guía",
+                text: "En la <strong>Escena 4</strong>, una mujer camina y el perro se asusta. ¿Qué estaba haciendo ella cuando el perro empezó a ladrar?<br><br>'The dog started barking while she _______ her dog.'",
+                action: { title: "Escena 4: Walking the Dog", help: "Completa usando el pasado continuo del verbo 'walk' para el sujeto 'she'.", cue: "🐕" },
+                choices: [
+                    { text: "was walking", score: true, nextId: "correct_q4" },
+                    { text: "were walking", nextId: "wrong_q4_plural" },
+                    { text: "walked", nextId: "wrong_q4_simple" }
+                ]
+            },
+            "correct_q4": {
+                speaker: "Guía",
+                text: "¡Increíble! 'She was walking' es la respuesta correcta. 'While' siempre nos da la pista de que viene una acción prolongada. Avancemos a la escena del ladrón.",
+                choices: [
+                    { text: "Siguiente escena (5)", nextId: "q5" }
+                ]
+            },
+            "wrong_q4_plural": {
+                speaker: "Guía",
+                text: "Revisa el sujeto 'she'. Es singular, por lo que no podemos usar 'were'.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q4" }
+                ]
+            },
+            "wrong_q4_simple": {
+                speaker: "Guía",
+                text: "Usaste 'walked' (pasado simple), pero la palabra 'while' (mientras) nos pide una acción que estaba desarrollándose en el tiempo.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q4" }
+                ]
+            },
+
+            // ESCENA 5
+            "q5": {
+                speaker: "Guía",
+                text: "Mira la <strong>Escena 5</strong>. Un ladrón lleva un televisor y aparece un policía. ¿Cómo respondemos en pasado continuo a esta pregunta?<br><br>'What was the thief doing when the police officer saw him?'",
+                action: { title: "Escena 5: The Thief", help: "Responde de forma completa respetando el pasado continuo del singular.", cue: "📺" },
+                choices: [
+                    { text: "He was stealing a TV.", score: true, nextId: "correct_q5" },
+                    { text: "He stole a TV.", nextId: "wrong_q5_simple" },
+                    { text: "He was steal a TV.", nextId: "wrong_q5_ing" }
+                ]
+            },
+            "correct_q5": {
+                speaker: "Guía",
+                text: "¡Excelente! 'He was stealing' describe de forma completa y exacta la acción que estaba cometiendo en ese momento.",
+                choices: [
+                    { text: "Siguiente escena (6)", nextId: "q6" }
+                ]
+            },
+            "wrong_q5_simple": {
+                speaker: "Guía",
+                text: "'He stole' es correcto para el pasado simple, pero la pregunta dice 'What WAS the thief DOING?'. Debes responder usando la misma estructura continua.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q5" }
+                ]
+            },
+            "wrong_q5_ing": {
+                speaker: "Guía",
+                text: "Casi. Recuerda que después de 'was/were' el verbo de acción debe llevar obligatoriamente la terminación '-ing' (stealing).",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q5" }
+                ]
+            },
+
+            // ESCENA 6
+            "q6": {
+                speaker: "Guía",
+                text: "En la <strong>Escena 6</strong>, los jóvenes juegan y empieza a llover. Completa el espacio libre:<br><br>'They _______ basketball when it started to rain.'",
+                action: { title: "Escena 6: Basketball", help: "Sujeto plural 'They'. Busca el verbo correcto en gerundio.", cue: "🏀" },
+                choices: [
+                    { text: "were playing", score: true, nextId: "correct_q6" },
+                    { text: "was playing", nextId: "wrong_q6_singular" },
+                    { text: "played", nextId: "wrong_q6_simple" }
+                ]
+            },
+            "correct_q6": {
+                speaker: "Guía",
+                text: "¡Magnífico! 'They were playing' es correcto. Estaban en pleno juego cuando la lluvia los interrumpió. Pasemos a la escena 7.",
+                choices: [
+                    { text: "Siguiente escena (7)", nextId: "q7" }
+                ]
+            },
+            "wrong_q6_singular": {
+                speaker: "Guía",
+                text: "Recuerda: 'They' es plural. 'Was' solo se reserva para el singular.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q6" }
+                ]
+            },
+            "wrong_q6_simple": {
+                speaker: "Guía",
+                text: "Si usas 'played', parecería que el juego ocurrió después o de golpe, pero era una acción larga en progreso que fue interrumpida.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q6" }
+                ]
+            },
+
+            // ESCENA 7
+            "q7": {
+                speaker: "Guía",
+                text: "Mira la <strong>Escena 7</strong>. Una mujer se relaja en la bañera cuando el teléfono empieza a sonar en el otro cuarto. Completa:<br><br>'While she _______ a bath, the telephone rang.'",
+                action: { title: "Escena 7: Bath Time", help: "Usa el pasado continuo del verbo 'have' para el sujeto 'she'.", cue: "🛁" },
+                choices: [
+                    { text: "was having", score: true, nextId: "correct_q7" },
+                    { text: "were having", nextId: "wrong_q7_plural" },
+                    { text: "had", nextId: "wrong_q7_simple" }
+                ]
+            },
+            "correct_q7": {
+                speaker: "Guía",
+                text: "¡Excelente trabajo! 'She was having a bath' es la forma exacta. Falta solo una escena para terminar.",
+                choices: [
+                    { text: "Última escena (8)", nextId: "q8" }
+                ]
+            },
+            "wrong_q7_plural": {
+                speaker: "Guía",
+                text: "El sujeto es 'she' (singular), asegúrate de usar 'was' en lugar de 'were'.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q7" }
+                ]
+            },
+            "wrong_q7_simple": {
+                speaker: "Guía",
+                text: "El verbo 'had' por sí solo es pasado simple. Como es una acción larga ('mientras se estaba bañando'), necesitamos la estructura del continuo.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q7" }
+                ]
+            },
+
+            // ESCENA 8
+            "q8": {
+                speaker: "Guía",
+                text: "Llegamos a la <strong>Escena 8</strong>. Dos personas esperan en la parada de autobús y de repente ven un ovni flotando. Completa usando el negativo:<br><br>'They _______ waiting for a taxi; they were waiting for a bus.'",
+                action: { title: "Escena 8: The UFO", help: "Evalúa la forma negativa para el sujeto plural 'They'.", cue: "🛸" },
+                choices: [
+                    { text: "weren't", score: true, nextId: "correct_q8" },
+                    { text: "wasn't", nextId: "wrong_q8_singular" },
+                    { text: "not were", nextId: "wrong_q8_syntax" }
+                ]
+            },
+            "correct_q8": {
+                speaker: "Guía",
+                text: "¡Maravilloso! Completaste con éxito las 8 situaciones. Has demostrado comprender cómo funciona la estructura del pasado continuo en todas sus formas.",
+                choices: [
+                    { text: "Ver resultados del examen", nextId: "final" }
+                ]
+            },
+            "wrong_q8_singular": {
+                speaker: "Guía",
+                text: "Casi lo logras. Pero recuerda que el sujeto es 'They', por lo que el negativo correcto debe basarse en 'were' y no en 'was'.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q8" }
+                ]
+            },
+            "wrong_q8_syntax": {
+                speaker: "Guía",
+                text: "En inglés, la contracción o el orden correcto para negar es 'were not' o su contracción 'weren't'. 'Not were' no es correcto en la sintaxis inglesa.",
+                choices: [
+                    { text: "Intentar de nuevo", nextId: "q8" }
+                ]
+            },
+
+            // PANTALLA FINAL
+            "final": {
+                speaker: "Guía",
+                text: "Hemos terminado. Gracias por tomarte el tiempo de repasar este tema con calma y concentración. ¿Te gustaría volver a iniciar para reforzar tu aprendizaje?",
+                action: { title: "Examen Finalizado", help: "Has respondido todas las preguntas de la hoja correctamente.", cue: "🏆" },
+                choices: [
+                    { text: "Reiniciar examen", action: "restart" }
+                ]
+            }
+        };
+
+        let currentId = "intro";
+        let score = 0;
+        let isTyping = false;
+        let typingTimeout;
+
+        const speakerElem = document.getElementById("speaker-name");
+        const textElem = document.getElementById("dialogue-text");
+        const choicesElem = document.getElementById("dialogue-choices");
+        const scoreCounter = document.getElementById("score-counter");
+        
+        const statusTitle = document.getElementById("status-title");
+        const helperText = document.getElementById("helper-text");
+        const visualCue = document.getElementById("visual-cue");
+
+        function typeText(text, callback) {
+            isTyping = true;
+            textElem.innerHTML = "";
+            let i = 0;
+            
+            function type() {
+                if (i < text.length) {
+                    // Permitir el renderizado de etiquetas HTML como <strong> o <em> de manera segura
+                    if (text.charAt(i) === '<') {
+                        let tag = '';
+                        while (text.charAt(i) !== '>') {
+                            tag += text.charAt(i);
+                            i++;
+                        }
+                        tag += '>';
+                        textElem.innerHTML += tag;
+                        i++;
+                    }
+                    textElem.innerHTML += text.charAt(i);
+                    i++;
+                    typingTimeout = setTimeout(type, 15); // Velocidad calma de renderizado de texto
+                } else {
+                    isTyping = false;
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        function updatePanels(action) {
+            if (action) {
+                statusTitle.textContent = action.title;
+                helperText.textContent = action.help;
+                visualCue.textContent = action.cue;
+                visualCue.style.opacity = "0.8";
+            } else {
+                statusTitle.textContent = "Instrucciones";
+                helperText.textContent = "La Guía te irá haciendo preguntas basadas en cada uno de los números de la hoja de la izquierda.";
+                visualCue.textContent = "📝";
+                visualCue.style.opacity = "0.15";
+            }
+        }
+
+        function renderNode(nodeId) {
+            clearTimeout(typingTimeout);
+            currentId = nodeId;
+            const node = dialogueData[nodeId];
+            if (!node) return;
+
+            // Actualizar paneles informativos laterales de forma sincronizada con la pregunta
+            updatePanels(node.action);
+
+            speakerElem.textContent = node.speaker;
+            choicesElem.innerHTML = "";
+
+            // Cambiar dinámicamente el borde de la caja de diálogos para dar feedback visual sutil
+            const dialogueBox = document.getElementById("dialogue-box");
+            if (nodeId.startsWith("correct_")) {
+                dialogueBox.style.borderColor = "var(--accent-correct)";
+            } else if (nodeId.startsWith("wrong_")) {
+                dialogueBox.style.borderColor = "var(--accent-incorrect)";
+            } else {
+                dialogueBox.style.borderColor = "var(--accent)";
+            }
+
+            typeText(node.text, () => {
+                node.choices.forEach(choice => {
+                    const button = document.createElement("button");
+                    button.className = "btn " + (choice.score ? "btn-primary" : "");
+                    button.textContent = choice.text;
+                    button.onclick = () => {
+                        if (choice.score) {
+                            score++;
+                            scoreCounter.textContent = `Progreso: ${score} / 8`;
+                        }
+                        if (choice.nextId) {
+                            renderNode(choice.nextId);
+                        } else if (choice.action === "restart") {
+                            score = 0;
+                            scoreCounter.textContent = `Progreso: 0 / 8`;
+                            renderNode("intro");
+                        }
+                    };
+                    choicesElem.appendChild(button);
+                });
+            });
+        }
+
+        // Inicialización
+        window.onload = () => {
+            renderNode("intro");
+        };
+    </script>
+</body>
+</html>
+
+Características pedagógicas de este rediseño:
+
+  - Integración Visual Completa: Al colocar el examen e imágenes en el panel
+    izquierdo [img] y el juego interactivo en el derecho, el estudiante no tiene
+    que alternar entre pestañas o ventanas, lo cual elimina drásticamente la
+    fricción y el agobio visual.
+  - Gramática Guiada con Explicación de Errores: En lugar de simplemente mostrar
+    "Respuesta Incorrecta", cada opción equivocada cuenta con un nodo de diálogo
+    específico en donde la Guía aclara el porqué de la regla sintáctica (por
+    ejemplo, diferenciando el uso de singulares y plurales de was/were, o el
+    contraste de pasado simple en oraciones interrumpidas).
+  - Ausencia de Estrés Temporal: Se quitó todo elemento que genere presión
+    innecesaria (cronómetros, alertas parpadeantes o sonidos de error bruscos),
+    fomentando que el estudiante analice y aprenda a su propio ritmo.
